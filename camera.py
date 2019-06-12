@@ -8,9 +8,10 @@ pCords1 = transformCords(cordsCamera1)
 pCords2 = transformCords(cordsCamera2)
 """
 
+
 import numpy as np
 from numpy.linalg import inv
-from vo2019.rotation import Rotation
+from rotation import Rotation
 
 
 def to2D(cords):
@@ -35,7 +36,7 @@ def transformCords(cords):
         return result
 
     except IOError as e:
-        print(e)
+        p(e)
         return False
 
 
