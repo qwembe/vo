@@ -93,7 +93,10 @@ class Camera:
 
     # 3
     def glob2image(self, glob=None):
-        if glob is not None: self.setGlobalPoints(glob)
+        if glob is not None:
+            self.setGlobalPoints(glob)
+        if glob is None:
+            assert ("Any points hasn't been found!")
         as_camera_see = self.newCameraCords(self.globalPoints)
         self.imagePoints = transformCords(as_camera_see)
         return self.imagePoints
