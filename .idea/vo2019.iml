@@ -3,6 +3,8 @@
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/venv/Lib/site-packages" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/venv/Lib/site-packages/cv2" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/venv/Lib/site-packages/cv2/data" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/.idea" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
     </content>
