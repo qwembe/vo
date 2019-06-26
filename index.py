@@ -29,8 +29,14 @@ print("Process sift example...")
 kp1, des1 = sift.detectAndCompute(gray1, None)
 kp2, des2 = sift.detectAndCompute(gray2, None)
 
+print("points 1")
+print(kp1)
+print("points 2")
+print(kp2)
+
+
 print("Initiate brute force matching descriptor")
-bf = cv2.BFMatcher()
+bf = cv2.BFMatcher();
 matches = bf.knnMatch(des1, des2, k=2)
 
 print("Apply ratio test")
