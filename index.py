@@ -1,128 +1,118 @@
-# pip install opencv-contrib-python==3.4.0.12
-import cv2
 import numpy as np
-import matplotlib.pyplot as plt
+import cv2
+
+video_path = 'vosamples/videocutted.mp4'
+output_file = "vosamples/output.mp4"
+cap = cv2.VideoCapture(video_path)
+
+fourcc = cv2.VideoWriter_fourcc(*'DIVX')
+
+# params for ShiTomasi corner detection
+feature_params = dict( maxCorners = 500,   # How many pts. to locate
+                       qualityLevel = 0.1,  # b/w 0 & 1, min. quality below which everyone is rejected
+                       minDistance = 7,   # Min eucledian distance b/w corners detected
+                       blockSize = 3 ) # Size of an average block for computing a derivative covariation matrix over each pixel neighborhood
+
+# Parameters for lucas kanade optical flow
+lk_params = dict( winSize  = (15,15),  # size of the search window at each pyramid level
+                  maxLevel = 2,   #  0, pyramids are not used (single level), if set to 1, two levels are used, and so on
+                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
+
+''' Criteria : Termination criteria for iterative search algorithm.
+    after maxcount { Criteria_Count } : no. of max iterations.
+    or after { Criteria Epsilon } : search window moves by less than this epsilon '''
 
 
-# example from https://docs.opencv.org/3.3.0/dc/dc3/tutorial_py_matcher.html
+# Take first frame and find corners in it
+ret, old_frame = cap.read()
+old_gray = cv2.cvtColor(old_frame, cv2.COLOR_BGR2GRAY)
+p0 = cv2.goodFeaturesToTrack(old_gray, mask=None, **feature_params)  #use goodFeaturesToTrack to find the location of the good corner.
 
-def imshow(img):
-    print("* Show image...")
-    cv2.imshow("image", img)
-    print("* Waiting for any keyboard command...")
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+print(p0.shape)
+print(p0)
 
+# Create a mask image for drawing purposes filed with zeros
+mask = np.zeros_like(old_frame)
 
-def ratiotest(matches):
-    good = []
-    print("* Ratio test")
-    for m, n in matches:
-        if m.distance < 0.4 * n.distance:
-            good.append(m)
-    return good
-
-
-# def execute_findHomography(good, kp1, kp2, img1, img2):
-#     print("*Find homography")
-#     if len(good) > MIN_MATCH_COUNT:
-#         src_pts = np.float32([kp1[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
-#         dst_pts = np.float32([kp2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
-#
-#         M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
-#         matchesMask = mask.ravel().tolist()
-#
-#         # print(img1.shape)
-#         h, w, rgb = img1.shape
-#         pts = np.float32([[0, 0], [0, h - 1], [w - 1, h - 1], [w - 1, 0]]).reshape(-1, 1, 2)
-#         dst = cv2.perspectiveTransform(pts, M)
-#
-#         img2 = cv2.polylines(img2, [np.int32(dst)], True, 255, 3, cv2.LINE_AA)
-#
-#     else:
-#         print("Not enough matches are found - %d/%d" % (len(good), MIN_MATCH_COUNT))
-#         matchesMask = None
-#     return matchesMask
-
-
-MIN_MATCH_COUNT = 10
-
-print("load image 1...")
-img1 = cv2.imread("vosamples/vo01.jpg")
-
-print("load image 2...")
-img2 = cv2.imread("vosamples/vo02.jpg")
-
-print("load image 3...")
-img3 = cv2.imread("vosamples/vo03.jpg")
-
-print("initiate sift detector...")
+#init sift detector
 sift = cv2.xfeatures2d.SIFT_create()
 
-print("Process sift example...")
-kp1, des1 = sift.detectAndCompute(img1, None)
-kp2, des2 = sift.detectAndCompute(img2, None)
-kp3, des3 = sift.detectAndCompute(img3, None)
+y = 0
+is_begin = True # To save the output video
+count = 1  # for the frame count
+n = 50  # Frames refresh rate for feature generation
 
-print("Initiate brute force matching descriptor")
-bf = cv2.BFMatcher()
-print(">First-second image processing...")
-matchesA = bf.knnMatch(des1, des2, k=2)
-print(">Second-third image processing...")
-matchesB = bf.knnMatch(des2, des3, k=2)
+def homograph(src,dest):
+    src_pts = np.float32(src).reshape(-1, 1, 2)
+    dst_pts = np.float32(dest).reshape(-1, 1, 2)
 
-print("Apply ratio test")
-print(">Test A")
-goodA = ratiotest(matchesA)
-print(">Test B")
-goodB = ratiotest(matchesB)
+    return cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+
+while True:
+    ret,frame = cap.read()
+    if frame is None:
+        break
+    processed = frame
+
+    #Saving the Video
+    if is_begin:
+        h, w, _ = processed.shape
+        out = cv2.VideoWriter(output_file, fourcc, 30, (w, h), True)
+        is_begin = False
+
+    # Convert to Grey Frame
+    frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    if count%n == 0:  # Refresh the tracking features after every 50 frames
+        cv2.imwrite('img/r{0:05d}.jpg'.format(y), img)
+        y += 1
+        ret, old_frame = cap.read()
+        old_gray = cv2.cvtColor(old_frame, cv2.COLOR_BGR2GRAY)
+        # p0 = cv2.goodFeaturesToTrack(old_gray, mask=None, **feature_params)
+        p0 = sift.detect(old_gray)
+        p0 = np.array([p.pt for p in p0]).reshape((-1,1,2))
+        print(p0.shape)
+        print(p0)
+        mask = np.zeros_like(old_frame)
+        # print(p0)
+
+    # calculate optical flow
+    p1, st, err = cv2.calcOpticalFlowPyrLK(old_gray, frame_gray, p0, None, **lk_params)
+
+    # Select good points
+    # print("st:")
+    # print(st)
+    # print("no st")
+    good_new = p1[st==1]
+    good_old = p0[st==1]
 
 
-print("Create homography mask")
-print("*Find homography")
 
-if len(good) > MIN_MATCH_COUNT:
-    src_pts = np.float32([kp1[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
-    dst_pts = np.float32([kp2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
+    # draw the tracks
+    for i,(new,old) in enumerate(zip(good_new,good_old)):
+        a,b = new.ravel() #tmp new value
+        c,d = old.ravel() #tmp old value
+        #draws a line connecting the old point with the new point
+        mask = cv2.line(mask, (a,b),(c,d), (0,255,0), 1)
+        #draws the new point
+        frame = cv2.circle(frame,(a,b),2,(0,0,255), -1)
+    img = cv2.add(frame,mask)
 
-    M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
-    matchesMask = mask.ravel().tolist()
+    out.write(img)
+    cv2.imshow('frame',img)
+    k = cv2.waitKey(30) & 0xff
 
-    # print(img1.shape)
-    h, w, rgb = img1.shape
-    pts = np.float32([[0, 0], [0, h - 1], [w - 1, h - 1], [w - 1, 0]]).reshape(-1, 1, 2)
-    dst = cv2.perspectiveTransform(pts, M)
+    #Show the Output
+    if k == 27:
+        cv2.imshow('', img)
+        break
 
-    img2 = cv2.polylines(img2, [np.int32(dst)], True, 255, 3, cv2.LINE_AA)
+    # Now update the previous frame and previous points
+    old_gray = frame_gray.copy()
+    p0 = good_new.reshape(-1,1,2)
 
-else:
-    print("Not enough matches are found - %d/%d" % (len(good), MIN_MATCH_COUNT))
-    matchesMask = None
+    count += 1
 
-
-
-
-# print(">Homography A")
-# maskA = execute_findHomography(goodA, kp1, kp2, img1, img2)
-# print(">Homography B")
-# maskB = execute_findHomography(goodB, kp2, kp3, img2, img3)
-# print(maskA)
-
-print("Image show")
-draw_paramsA = dict(matchColor=(0, 255, 0),  # draw matches in green color
-                    singlePointColor=None,
-                    matchesMask=maskA,  # draw only inliers
-                    flags=2)
-
-img3 = cv2.drawMatches(img1, kp1, img2, kp2, goodA, None, **draw_paramsA)
-
-imshow(img3)
-
-draw_paramsB = dict(matchColor=(0, 255, 0),  # draw matches in green color
-                    singlePointColor=None,
-                    matchesMask=maskB,  # draw only inliers
-                    flags=2)
-
-img4 = cv2.drawMatches(img2, kp2, img3, kp3, goodB, None, **draw_paramsB)
-
-imshow(img4)
+# release and destroy all windows
+cv2.destroyAllWindows()
+cap.release()
