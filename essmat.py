@@ -1,6 +1,7 @@
 import numpy as np
-from numpy.linalg import matrix_rank,svd,det
+from numpy.linalg import matrix_rank, svd, det
 from scipy.linalg import null_space
+
 """
 def createEssenceMatrix(cordsCameraA,cordsCameraB):
 создает матрицу эссенции из двух наборов координат
@@ -18,10 +19,10 @@ def createEssenceMatrix(cordsCameraA, cordsCameraB):
     semiEss = np.array(semiEss)
     rank = matrix_rank(semiEss)
     if (rank != 8):
-        print("dots dont correspond")
-        print("rank = ", rank)
-        assert ("dots dont correspond! ")
-        raise IOError("dots dont correspond! ")
+        # print("dots dont correspond")
+        # print("rank = ", rank)
+        # assert ("dots dont correspond! ")
+        raise IOError("dots dont correspond! rank =",rank)
     else:
         E = null_space(semiEss).reshape(3, 3)
         return E
@@ -66,10 +67,10 @@ def e_decomposition(E_hat):
 
     # Occasionally rotation may be twisted, so it is beter to multiplay it on it's det in case of wrong rotation matrix
     Rt = np.array([
-        (u @ W.T @ vt) * check_true_rot(u @ W.T @ vt),          # !
-        (u @ W @ vt) * check_true_rot(u @ W @ vt),       # !
-        (u @ W.T @ vt) * check_true_rot(u @ W.T @ vt),          # !
-        (u @ W @ vt) * check_true_rot(u @ W @ vt),       # !
+        (u @ W.T @ vt) * check_true_rot(u @ W.T @ vt),  # !
+        (u @ W @ vt) * check_true_rot(u @ W @ vt),  # !
+        (u @ W.T @ vt) * check_true_rot(u @ W.T @ vt),  # !
+        (u @ W @ vt) * check_true_rot(u @ W @ vt),  # !
     ])
 
     return zip(Rt, X)

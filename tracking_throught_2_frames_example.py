@@ -27,7 +27,7 @@ camera_cords1 = make_absolute_image_points(camera1, glob)
 camera_cords2 = make_absolute_image_points(camera2, glob)
 camera_cords3 = make_absolute_image_points(camera3, glob)
 # end init
-
+print(image1)
 # Making essential matrix
 print("Make essential matrix from camera1 and camera2")
 E1 = createEssenceMatrix(image1, image2)

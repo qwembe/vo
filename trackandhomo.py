@@ -20,8 +20,10 @@ r     - toggle RANSAC
 
 import numpy as np
 import cv2
+
 # import video
 # from common import draw_str
+from estimate_movement import process_vo
 
 lk_params = dict(winSize=(19, 19),
                  maxLevel=2,
@@ -50,6 +52,7 @@ class App:
         self.cam = cv2.VideoCapture(video_src)
         self.p0 = None
         self.use_ransac = True
+        self.last_Hstat = None
 
     def run(self):
         while True:
@@ -59,17 +62,29 @@ class App:
             if self.p0 is not None:
                 p2, trace_status = checkedTrace(self.gray1, frame_gray, self.p1)
 
+                mp0 = self.p0[trace_status].copy()
+                mp1 = self.p1[trace_status].copy()
+                mp2 = p2[trace_status].copy()
+
                 self.p1 = p2[trace_status].copy()
                 self.p0 = self.p0[trace_status].copy()
                 self.gray1 = frame_gray
+                if self.last_Hstat is not None:
+                    self.last_Hstat = self.last_Hstat[trace_status].copy()
 
                 if len(self.p0) < 4:
                     self.p0 = None
                     continue
+
+
                 H, status = cv2.findHomography(self.p0, self.p1, (0, cv2.RANSAC)[self.use_ransac], 10.0)
                 h, w = frame.shape[:2]
                 overlay = cv2.warpPerspective(self.frame0, H, (w, h))
                 vis = cv2.addWeighted(vis, 0.5, overlay, 0.5, 0.0)
+
+                if self.last_Hstat is None:
+                    self.last_Hstat = status
+                    continue
 
                 for (x0, y0), (x1, y1), good in zip(self.p0[:, 0], self.p1[:, 0], status[:, 0]):
                     if good:
@@ -77,7 +92,7 @@ class App:
                     cv2.circle(vis, (x1, y1), 2, (red, green)[good], -1)
                 # draw_str(vis, (20, 20), 'track count: %d' % len(self.p1))
                 # if self.use_ransac:
-                    # draw_str(vis, (20, 40), 'RANSAC')
+                # draw_str(vis, (20, 40), 'RANSAC')
             else:
                 p = cv2.goodFeaturesToTrack(frame_gray, **feature_params)
                 if p is not None:
