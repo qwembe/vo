@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 
+
 class mPlot:
 
     def __init__(self):
@@ -47,13 +48,14 @@ class mPlot:
 
     def show(self, xs=-5, xf=5
              , ys=-5, yf=5
-             , zs=-5, zf=5):
-        self.addVector([xf, 0, 0], offset=[xs, 0, 0], color="r", vectype="dashed", linewidths=0.5)
-        self.addVector([0, yf, 0], offset=[0, ys, 0], color="b", vectype="dashed", linewidths=0.5)
-        self.addVector([0, 0, zf], offset=[0, 0, zs], color="g", vectype="dashed", linewidths=0.5)
+             , zs=-5, zf=5,
+             showaxis=True):
+        if showaxis:
+            self.addVector([xf, 0, 0], offset=[xs, 0, 0], color="r", vectype="dashed", linewidths=0.5)
+            self.addVector([0, yf, 0], offset=[0, ys, 0], color="b", vectype="dashed", linewidths=0.5)
+            self.addVector([0, 0, zf], offset=[0, 0, zs], color="g", vectype="dashed", linewidths=0.5)
         self.ax.set_xlim(xs, xf)
         self.ax.set_ylim(ys, yf)
         self.ax.set_zlim(zs, zf)
         plt.show()
         return
-

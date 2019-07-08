@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from mplot import mPlot
 from estimate_movement import process_vo
 
 lk_params = dict(winSize=(19, 19),
@@ -25,81 +26,96 @@ red = (0, 0, 255)
 
 cam = cv2.VideoCapture("vosamples/videocutted.mp4")
 sift = cv2.xfeatures2d.SIFT_create()
+ret = True
+stepcounter = 15
+track = []
+while ret and stepcounter:
+    ret, frame = cam.read()
+    frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-ret, frame = cam.read()
-frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    kp0 = sift.detect(frame)
+    p0 = np.float32([[[p.pt[0], p.pt[1]]] for p in kp0])
 
-kp0 = sift.detect(frame)
-p0 = np.float32([[[p.pt[0], p.pt[1]]] for p in kp0])
+    ret, frame2 = cam.read()
+    ret, frame2 = cam.read()
+    ret, frame2 = cam.read()
+    ret, frame2 = cam.read()
+    ret, frame2 = cam.read()
+    ret, frame2 = cam.read()
 
-ret, frame2 = cam.read()
-ret, frame2 = cam.read()
+    frame_gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
+    p1, trace_status = checkedTrace(frame_gray, frame_gray2, p0)
 
+    p0 = p0[trace_status].copy()
+    p1 = p1[trace_status].copy()
 
-frame_gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
-p1, trace_status = checkedTrace(frame_gray, frame_gray2, p0)
+    H, status1 = cv2.findHomography(p0, p1, (0, cv2.RANSAC)[True], 3.0)
+    for (x0, y0), (x1, y1), good in zip(p0[:, 0], p1[:, 0], status1[:, 0]):
+        if good:
+            cv2.line(frame2, (x0, y0), (x1, y1), (0, 128, 0))
+        cv2.circle(frame2, (x1, y1), 2, (red, green)[good], -1)
 
-p0 = p0[trace_status].copy()
-p1 = p1[trace_status].copy()
+    # cv2.imshow('lk_homography', frame2)
+    # cv2.waitKey(0)
 
-H, status1 = cv2.findHomography(p0, p1, (0, cv2.RANSAC)[True], 3.0)
+    ret, frame2 = cam.read()
+    ret, frame2 = cam.read()
+    ret, frame2 = cam.read()
+    ret, frame2 = cam.read()
+    ret, frame2 = cam.read()
+    ret, frame2 = cam.read()
 
-for (x0, y0), (x1, y1), good in zip(p0[:, 0], p1[:, 0], status1[:, 0]):
-    if good:
-        cv2.line(frame2, (x0, y0), (x1, y1), (0, 128, 0))
-    cv2.circle(frame2, (x1, y1), 2, (red, green)[good], -1)
+    frame_gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
+    p2, trace_status = checkedTrace(frame_gray, frame_gray2, p1)
 
-cv2.imshow('lk_homography', frame2)
-cv2.waitKey(0)
+    p0 = p0[trace_status].copy()
+    p1 = p1[trace_status].copy()
+    p2 = p2[trace_status].copy()
+    status1 = status1[trace_status].copy()
 
-ret, frame2 = cam.read()
-ret, frame2 = cam.read()
+    H, status2 = cv2.findHomography(p1, p2, (0, cv2.RANSAC)[True], 3.0)
 
+    best = (status1[:, 0] >= 1) * (status2[:, 0] >= 1)
 
-frame_gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
-p2, trace_status = checkedTrace(frame_gray, frame_gray2, p1)
+    a = p0[best].copy()
+    b = p1[best].copy()
+    c = p2[best].copy()
+    choose_mask = np.random.choice(len(a), 9)
 
-p0 = p0[trace_status].copy()
-p1 = p1[trace_status].copy()
-p2 = p2[trace_status].copy()
-status1 = status1[trace_status].copy()
+    for (x0, y0), (x1, y1), good in zip(a[:, 0], c[:, 0], best):
+        if good:
+            cv2.line(frame2, (x0, y0), (x1, y1), (0, 128, 0))
+        cv2.circle(frame2, (x1, y1), 2, (red, green)[good], -1)
 
-H, status2 = cv2.findHomography(p1, p2, (0, cv2.RANSAC)[True], 3.0)
+    # cv2.imshow('lk_homography', frame2)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
 
-best = (status1[:, 0] >= 1) * (status2[:, 0] >= 1)
+    counter = 1000
+    flag = False
 
-a = p0[best].copy()
-b = p1[best].copy()
-c = p2[best].copy()
-choose_mask = np.random.choice(len(a), 9)
+    while counter > 0 and not flag:
+        try:
+            choose_mask = np.random.choice(len(a), 9)
+            flag, T, scale = process_vo(a[choose_mask, 0], b[choose_mask, 0], c[choose_mask, 0])
+            # print(T)
+            track.append(np.array(T)/scale)
+            # flag = True
+        except IOError as e:
+            counter = counter - 1
+    stepcounter = stepcounter - 1
 
-# print(a[choose_mask, 0])
+mplt = mPlot()
+t = np.array([0,0,0])
+print(track)
+for T in track:
+    print(T,t)
+    mplt.addVector(t + T, t)
+    t = t + T
 
-for (x0, y0), (x1, y1), good in zip(a[:, 0], c[:, 0], best):
-    if good:
-        cv2.line(frame2, (x0, y0), (x1, y1), (0, 128, 0))
-    cv2.circle(frame2, (x1, y1), 2, (red, green)[good], -1)
-
-
-
-cv2.imshow('lk_homography', frame2)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
-
-counter = 1000
-flag = False
-while counter > 0 and not flag:
-    try:
-        choose_mask = np.random.choice(len(a), 9)
-        process_vo(a[choose_mask, 0], b[choose_mask, 0], c[choose_mask, 0])
-        # flag = True
-    except IOError as e:
-        counter = counter - 1
-
-
+mplt.show()
 
 cam.release()
-
 
 # def main():
 #     video_src = "vosamples/videocutted.mp4"

@@ -36,30 +36,32 @@ def process_vo(p0, p1, p2):
     mcam2.set_NewBasis(Rt1 @ Rt2)
     B = np.array(rotate_cords(mcam1, B))
 
-    print(get_scale_ratio(A, B))
+    scale = get_scale_ratio(A,B)
+    print(scale)
 
-    # make visual
-    true_image1 = rotate_cords(Camera(), image0)
-    true_image2 = rotate_cords(mcam1, image1)
-    true_image3 = rotate_cords(mcam2, image2)
-
-    mplt = mPlot()
-    mplt.show_camera_basis(Camera())
-    mplt.show_camera_basis(mcam1)
-    mplt.show_camera_basis(mcam2)
-
-    for i in range(0, len(image0)):
-        mplt.addVector(A[i], Camera().getOffset(), vectype="dashed")
-        mplt.addVector(A[i], mcam1.getOffset(), vectype="dashed")
-
-    for i in range(0, len(image1)):
-        mplt.addVector(B[i], mcam1.getOffset(), vectype="dashed")
-        mplt.addVector(B[i], mcam2.getOffset(), vectype="dashed", color="b")
-
-    mplt.addPoints(A, param='r')
-    mplt.addPoints(B, param='b')
-
-    mplt.addPoints(true_image1, param='g')
-    mplt.addPoints(true_image2, param='b')
-    mplt.addPoints(true_image3, param='c')
-    mplt.show(-50,50,-50,50,-50,50)
+    # # make visual
+    # true_image1 = rotate_cords(Camera(), image0)
+    # true_image2 = rotate_cords(mcam1, image1)
+    # true_image3 = rotate_cords(mcam2, image2)
+    #
+    # mplt = mPlot()
+    # mplt.show_camera_basis(Camera())
+    # mplt.show_camera_basis(mcam1)
+    # mplt.show_camera_basis(mcam2)
+    #
+    # for i in range(0, len(image0)):
+    #     mplt.addVector(A[i], Camera().getOffset(), vectype="dashed")
+    #     mplt.addVector(A[i], mcam1.getOffset(), vectype="dashed")
+    #
+    # for i in range(0, len(image1)):
+    #     mplt.addVector(B[i], mcam1.getOffset(), vectype="dashed")
+    #     mplt.addVector(B[i], mcam2.getOffset(), vectype="dashed", color="b")
+    #
+    # mplt.addPoints(A, param='r')
+    # mplt.addPoints(B, param='b')
+    #
+    # mplt.addPoints(true_image1, param='g')
+    # mplt.addPoints(true_image2, param='b')
+    # mplt.addPoints(true_image3, param='c')
+    # mplt.show(-50,50,-50,50,-50,50)
+    return True, T1, scale
