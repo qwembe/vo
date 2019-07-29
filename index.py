@@ -12,6 +12,9 @@ feature_params = dict(maxCorners=1000,
                       minDistance=8,
                       blockSize=19)
 
+numberOfFrames = 85
+dataDestination = "vosamples/image_00/data/"
+
 
 def checkedTrace(img0, img1, p0, back_threshold=1.0):
     p1, st, err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
@@ -24,24 +27,81 @@ def checkedTrace(img0, img1, p0, back_threshold=1.0):
 green = (0, 255, 0)
 red = (0, 0, 255)
 
-cam = cv2.VideoCapture("vosamples/videocutted.mp4")
+currentFrame = 0
+def read():
+    global currentFrame
+    if currentFrame < numberOfFrames:
+        currentFrame = 1 + currentFrame
+        print(dataDestination + str(currentFrame).zfill(10) + ".png")
+        return True, cv2.imread(dataDestination + str(currentFrame + 1).zfill(10) + ".png")
+    return False, None
+
+
+# cam = cv2.VideoCapture("vosamples/videocutted.mp4")
 sift = cv2.xfeatures2d.SIFT_create()
+fast = cv2.FastFeatureDetector()
+
 ret = True
-stepcounter = 15
+stepcounter = 6
 track = []
+prevFrame = None
+p0 = None
+prevGrayFrame = None
 while ret and stepcounter:
-    ret, frame = cam.read()
+    # init
+    if prevFrame is None:
+        ret, prevFrame = read()
+        if not ret:
+            break
+        prevGrayFrame = cv2.cvtColor(prevFrame, cv2.COLOR_BGR2GRAY)
+        p0 = cv2.goodFeaturesToTrack(prevGrayFrame, mask = None, **feature_params)
+    else:
+        prevFrame = frame
+        prevGrayFrame = grayFrame
+        p0 = p1
+
+    ret, frame = read()
+    if not ret:
+        break
+    grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    p1 = cv2.goodFeaturesToTrack(prevGrayFrame, mask = None, **feature_params)
+
+    p2, trace_status = checkedTrace(prevGrayFrame, grayFrame, p1 )
+
+    p1 = p1[trace_status].copy()
+    p2 = p2[trace_status].copy()
+
+    H, status0 = cv2.findHomography(p1, p2, cv2.RANSAC, 3.0)
+    for (x0, y0), (x1, y1), good in zip(p1[:, 0], p2[:, 0], status0[:, 0]):
+        if good:
+            cv2.line(frame, (x0, y0), (x1, y1), (0, 128, 0))
+        cv2.circle(frame, (x1, y1), 2, (red, green)[good], -1)
+
+    cv2.imshow('lk_homography', frame)
+    cv2.waitKey(0)
+
+
+
+
+    stepcounter = 1 + stepcounter
+
+
+exit(0)
+
+
+
+
+
+
+
+while ret and stepcounter:
+    ret, frame = read()
     frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     kp0 = sift.detect(frame)
     p0 = np.float32([[[p.pt[0], p.pt[1]]] for p in kp0])
 
-    ret, frame2 = cam.read()
-    ret, frame2 = cam.read()
-    ret, frame2 = cam.read()
-    ret, frame2 = cam.read()
-    ret, frame2 = cam.read()
-    ret, frame2 = cam.read()
+    ret, frame2 = read()
 
     frame_gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
     p1, trace_status = checkedTrace(frame_gray, frame_gray2, p0)
@@ -58,12 +118,7 @@ while ret and stepcounter:
     # cv2.imshow('lk_homography', frame2)
     # cv2.waitKey(0)
 
-    ret, frame2 = cam.read()
-    ret, frame2 = cam.read()
-    ret, frame2 = cam.read()
-    ret, frame2 = cam.read()
-    ret, frame2 = cam.read()
-    ret, frame2 = cam.read()
+    ret, frame2 = read()
 
     frame_gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
     p2, trace_status = checkedTrace(frame_gray, frame_gray2, p1)
@@ -87,9 +142,9 @@ while ret and stepcounter:
             cv2.line(frame2, (x0, y0), (x1, y1), (0, 128, 0))
         cv2.circle(frame2, (x1, y1), 2, (red, green)[good], -1)
 
-    # cv2.imshow('lk_homography', frame2)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    cv2.imshow('lk_homography', frame2)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
     counter = 1000
     flag = False
@@ -99,17 +154,17 @@ while ret and stepcounter:
             choose_mask = np.random.choice(len(a), 9)
             flag, T, scale = process_vo(a[choose_mask, 0], b[choose_mask, 0], c[choose_mask, 0])
             # print(T)
-            track.append(np.array(T)/scale)
+            track.append(np.array(T) / scale)
             # flag = True
         except IOError as e:
             counter = counter - 1
     stepcounter = stepcounter - 1
 
 mplt = mPlot()
-t = np.array([0,0,0])
+t = np.array([0, 0, 0])
 print(track)
 for T in track:
-    print(T,t)
+    print(T, t)
     mplt.addVector(t + T, t)
     t = t + T
 
@@ -117,10 +172,11 @@ mplt.show()
 
 cam.release()
 
-# def main():
-#     video_src = "vosamples/videocutted.mp4"
-#     App(video_src).run()
-#     cv2.destroyAllWindows()
+
+def main():
+    video_src = "vosamples/videocutted.mp4"
+    App(video_src).run()
+    cv2.destroyAllWindows()
 
 # if __name__ == '__main__':
 #     main()
