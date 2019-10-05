@@ -1,6 +1,7 @@
 import numpy as np
 from camera import to2D
 from numpy.linalg import inv
+from camera import Camera
 
 # Generates 9 global points at (-,+,+) sector
 def generate9globalPoints():

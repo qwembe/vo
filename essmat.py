@@ -32,7 +32,6 @@ def createEssenceMatrix(cordsCameraA, cordsCameraB):
 "Плохая" матрица поворота - это такая матрица, определитель которой равен -1
 """
 
-
 def check_true_rot(R):
     return det(R)
 

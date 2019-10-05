@@ -60,6 +60,7 @@ class Camera:
     def __init__(self,
                  orient=[0, 0, 0],
                  offset=[0, 0, 0]):
+        # type: (object, object) -> object
         self.offset = np.array(offset)
         self.R = Rotation()
         m_orient = np.array(orient)
